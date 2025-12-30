@@ -38,6 +38,7 @@ jobs:
         with:
           version: 9
           run_install: false
+          add-to-path: true
 
       # Build sketches
       - name: Build 1
