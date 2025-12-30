@@ -55,7 +55,7 @@ jobs:
         run: |
           mkdir pages
           cp -r 1/dist pages/1
-          cp -r 2/dist pages/2
+          # cp -r 2/dist pages/2
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
