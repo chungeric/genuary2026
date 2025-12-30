@@ -14,14 +14,15 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: pnpm/action-setup@v3
+      - name: Set up Node
+        uses: actions/setup-node@v6
         with:
-          version: 9  # or whatever version you're using
-      
-      - uses: actions/setup-node@v4
+          node-version: lts/*
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
         with:
-          node-version: '20'
-          cache: 'pnpm'
+          version: 10
 
       # Build sketches
       - name: Build 1
