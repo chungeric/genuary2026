@@ -44,11 +44,11 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm run build
 
-      - name: Build 2
-        working-directory: 2
-        run: |
-          pnpm install --frozen-lockfile
-          pnpm run build
+      # - name: Build 2
+      #   working-directory: 2
+      #   run: |
+      #     pnpm install --frozen-lockfile
+      #     pnpm run build
 
       # Collect all dist outputs
       - name: Prepare Pages directory
