@@ -1,70 +1,57 @@
-# Simple workflow for deploying static content to GitHub Pages
-name: Deploy static content to Pages
+name: Deploy to GitHub Pages
 on:
-  # Runs on pushes targeting the default branch
   push:
     branches: ['main']
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
-# Sets the GITHUB_TOKEN permissions to allow deployment to GitHub Pages
+    
 permissions:
   contents: read
   pages: write
   id-token: write
-# Allow one concurrent deployment
-concurrency:
-  group: 'pages'
-  cancel-in-progress: true
 jobs:
-  # Single deploy job since we're just deploying
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v5
+      - uses: actions/checkout@v5
 
-      - name: Set up Node
-        uses: actions/setup-node@v6
+      - uses: pnpm/action-setup@v3
         with:
-          node-version: lts/*
-
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
+          version: 9  # or whatever version you're using
+      
+      - uses: actions/setup-node@v4
         with:
-          version: 10
+          node-version: '20'
+          cache: 'pnpm'
 
       # Build sketches
       - name: Build 1
-        working-directory: 1
         run: |
-          pnpm install --frozen-lockfile
+          cd 1
+          pnpm install
           pnpm run build
-
       # - name: Build 2
-      #   working-directory: 2
       #   run: |
-      #     pnpm install --frozen-lockfile
+      #     cd 2
+      #     pnpm install
       #     pnpm run build
 
-      # Collect all dist outputs
-      - name: Prepare Pages directory
+      # Combine builds
+      - name: Combine builds
         run: |
-          mkdir pages
-          cp -r 1/dist pages/1
-          # cp -r 2/dist pages/2
+          mkdir -p dist
+          cp -r 1/dist dist/1
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v4
+      - uses: actions/configure-pages@v4
+      - uses: actions/upload-pages-artifact@v3
         with:
-          path: pages
+          path: 'dist'
 
-      - name: Deploy to GitHub Pages
-        id: deployment
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
         uses: actions/deploy-pages@v4
