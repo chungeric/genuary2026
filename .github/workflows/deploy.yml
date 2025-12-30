@@ -30,17 +30,18 @@ jobs:
           cd 1
           pnpm install
           pnpm run build
-      # - name: Build 2
-      #   run: |
-      #     cd 2
-      #     pnpm install
-      #     pnpm run build
+      - name: Build 2
+        run: |
+          cd 2
+          pnpm install
+          pnpm run build
 
       # Combine builds
       - name: Combine builds
         run: |
           mkdir -p dist
           cp -r 1/dist dist/1
+          cp -r 2/dist dist/2
 
       - uses: actions/configure-pages@v4
       - uses: actions/upload-pages-artifact@v3
