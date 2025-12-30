@@ -24,24 +24,29 @@ jobs:
         with:
           version: 10
 
-      # Build sketches
-      - name: Build 1
+      # Build all projects
+      - name: Build all projects
         run: |
-          cd 1
-          pnpm install
-          pnpm run build
-      - name: Build 2
-        run: |
-          cd 2
-          pnpm install
-          pnpm run build
+          for i in {1..31}; do
+            if [ -d "$i" ] && [ -f "$i/package.json" ]; then
+              echo "Building project $i..."
+              cd "$i"
+              pnpm install
+              pnpm run build
+              cd ..
+            fi
+          done
 
       # Combine builds
       - name: Combine builds
         run: |
           mkdir -p dist
-          cp -r 1/dist dist/1
-          cp -r 2/dist dist/2
+          for i in {1..31}; do
+            if [ -d "$i/dist" ]; then
+              echo "Copying $i/dist to dist/$i"
+              cp -r "$i/dist" "dist/$i"
+            fi
+          done
 
       - uses: actions/configure-pages@v4
       - uses: actions/upload-pages-artifact@v3
