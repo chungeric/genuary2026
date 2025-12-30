@@ -31,14 +31,11 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: lts/*
-          cache: 'pnpm'
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 9
-          run_install: false
-          add-to-path: true
+          version: 10
 
       # Build sketches
       - name: Build 1
@@ -46,6 +43,7 @@ jobs:
         run: |
           pnpm install --frozen-lockfile
           pnpm run build
+
       - name: Build 2
         working-directory: 2
         run: |
@@ -56,8 +54,8 @@ jobs:
       - name: Prepare Pages directory
         run: |
           mkdir pages
-          cp -r project-a/dist pages/project-a
-          cp -r project-b/dist pages/project-b
+          cp -r 1/dist pages/1
+          cp -r 2/dist pages/2
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
