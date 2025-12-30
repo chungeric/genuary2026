@@ -1,7 +1,3 @@
-import { defineConfig } from 'vite'
-
-export default defineConfig(({ mode }) => {
-  return {
-    base: '/genuary2026/1/',
-  }
-})
+export default {
+  base: '/genuary2026/1/',
+}
