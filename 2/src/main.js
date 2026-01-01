@@ -9,10 +9,10 @@ import { createNoise3D } from 'simplex-noise';
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x000000);
-scene.fog = new THREE.Fog(0x000000, 50, 60);
+// scene.fog = new THREE.Fog(0x000000, 50, 60);
 const camera = new THREE.PerspectiveCamera( 10, window.innerWidth / window.innerHeight, 0.1, 1000 );
 camera.position.x = 30;
-camera.position.y = 5;
+camera.position.y = 18;
 camera.position.z = 30;
 
 // --- WebGPU Renderer  ---
@@ -26,7 +26,7 @@ controls.target.set(0, 0, 0);
 controls.minAzimuthAngle = Math.PI / 6;
 controls.maxAzimuthAngle = Math.PI / 6 + Math.PI / 6;
 controls.minPolarAngle = 0;
-controls.maxPolarAngle = Math.PI / 8 * 3.6;
+controls.maxPolarAngle = Math.PI / 8 * 3;
 controls.minDistance = 20;
 controls.maxDistance = 50;
 controls.enablePan = false;
@@ -38,7 +38,7 @@ const timeUniform = uniform(0.0);
 const ballGeometry = new THREE.SphereGeometry( 0.5, 32, 32 );
 const ballMaterial = new THREE.MeshStandardNodeMaterial({ side: THREE.DoubleSide, roughness: 0.35 });
 
-const gridSize = 30;
+const gridSize = 32;
 const instanceCount = gridSize * gridSize;
 
 // Generate colors for each instance
@@ -78,7 +78,7 @@ const instancedMesh = new THREE.InstancedMesh( ballGeometry, ballMaterial, insta
 scene.add(instancedMesh);
 
 // Generate positions
-const spacing = 1.3;
+const spacing = 1.05;
 const positions = [];
 for (let x = 0; x < gridSize; x++) {
   for (let z = 0; z < gridSize; z++) {
@@ -142,21 +142,21 @@ function animate() {
       const index = x * gridSize + z;
       const originalPos = positions[index];
 
-      const noiseScale = 0.1;
-      const noiseSpeed = 0.2;
+      const noiseScale = 0.07;
+      const noiseSpeed = 0.3;
       let n = noise3D(
         originalPos[0] * noiseScale,
         originalPos[2] * noiseScale,
         time * noiseSpeed
       ); // Range -1 to 1
 
-      const y = n * 0.6; // Amplify the height
+      const y = n * 0.7; // Amplify the height
       dummy.position.set(originalPos[0], y, originalPos[2]);
 
       dummy.rotation.y = n * Math.PI; // Rotate based on noise
 
-      const scale = THREE.MathUtils.mapLinear(n, -1, 1, 1, spacing - 0.1);
-      dummy.scale.set(scale, scale, scale);
+      const scaleY = THREE.MathUtils.mapLinear(n, -1, 1, 0.95, 1);
+      dummy.scale.set(1, scaleY, 1);
 
       dummy.updateMatrix();
       instancedMesh.setMatrixAt(index, dummy.matrix);
