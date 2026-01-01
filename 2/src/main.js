@@ -2,13 +2,14 @@
 
 import * as THREE from 'three/webgpu'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { clamp, Fn, oneMinus, positionLocal, positionWorld, smoothstep, texture, uv, vec3, vec4 } from 'three/tsl';
-import { float, vec2, dot, sin, fract, div, floor, mod, cos, sub, mul, mix, int, Break, If, Loop } from 'three/tsl';
+import { clamp, Fn, oneMinus, positionLocal, positionWorld, smoothstep, texture, uv, vec3, vec4, instancedBufferAttribute, remap, positionView } from 'three/tsl';
+import { float, vec2, dot, sin, fract, div, floor, mod, cos, sub, mul, mix, int, Break, If, Loop, uniform } from 'three/tsl';
 import { circles, grid, polkaDots, roughClay, zebraLines } from 'tsl-textures';
+import { RectAreaLightTexturesLib } from 'three/addons/lights/RectAreaLightTexturesLib.js';
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x000000);
-// scene.fog = new THREE.Fog(0x000000, 20, 60);
+scene.fog = new THREE.Fog(0x000000, 20, 40);
 const camera = new THREE.PerspectiveCamera( 20, window.innerWidth / window.innerHeight, 0.1, 1000 );
 camera.position.x = 15;
 camera.position.y = 20;
@@ -23,104 +24,83 @@ document.body.appendChild( renderer.domElement );
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.target.set(0, 0, 0);
 
+const timeUniform = uniform(0.0);
+
 const ballGeometry = new THREE.SphereGeometry( 0.5, 32, 32 );
+const ballMaterial = new THREE.MeshStandardNodeMaterial({ side: THREE.DoubleSide });
 
-const floorThickness = 20;
-const floorGeometry = new THREE.BoxGeometry( 1, floorThickness, 1 );
+const positions = [];
+const gridSize = 30;
+const instanceCount = gridSize * gridSize;
 
-const gridItems = [];
-const GRID_SIZE = 3;
-const GRID_SPACING = 1.8;
+// Generate colors for each instance
+const dotColors = [];
+const bgColors = [];
+const timeOffsets = [];
+for (let i = 0; i < instanceCount; i++) {
+  const dotColor = randomColor();
+  const bgColor = highContrastColor(dotColor);
+  dotColors.push(dotColor.r, dotColor.g, dotColor.b);
+  bgColors.push(bgColor.r, bgColor.g, bgColor.b);
+  timeOffsets.push(i);
+}
 
-function createGrid() {
-  const gridOffset = (GRID_SIZE - 1) / 2;
-  for (let i = 0; i < GRID_SIZE; i++) {
-    for (let j = 0; j < GRID_SIZE; j++) {
+// Create instance color attributes
+const timeOffsetAttribute = new THREE.InstancedBufferAttribute(new Float32Array(timeOffsets), 1);
+const dotColorAttribute = new THREE.InstancedBufferAttribute(new Float32Array(dotColors), 3);
+const bgColorAttribute = new THREE.InstancedBufferAttribute(new Float32Array(bgColors), 3);
 
-      const gridItem = new THREE.Group();
+// Set instance attributes on the geometry
+ballGeometry.setAttribute('instanceTimeOffset', timeOffsetAttribute);
+ballGeometry.setAttribute('instanceDotColor', dotColorAttribute);
+ballGeometry.setAttribute('instanceBgColor', bgColorAttribute);
 
-      const ballGroup = new THREE.Group();
-      const ballMaterial = new THREE.MeshStandardNodeMaterial({ side: THREE.DoubleSide, roughness: 1 });
-      const dotColor = randomColor();
-      const bgColor = highContrastColor(dotColor);
-      ballMaterial.colorNode = polkaDots ( {
-        count: 2,
-        size: 0.56,
-        blur: 0.25,
-        color: dotColor,
-        background: bgColor,
-        flat: 0
-      } );
-      const ball = new THREE.Mesh( ballGeometry, ballMaterial );
-      ball.castShadow = true;
-      ball.position.x = (i - gridOffset) * GRID_SPACING;
-      ball.position.y = 0.5;
-      ball.position.z = (j - gridOffset) * GRID_SPACING;
-      ball.userData.rotationAxis = ['x', 'z'][Math.floor(Math.random() * 2)];
-      ball.userData.onSurface = false;
-      ballGroup.add( ball );
-      ballGroup.userData.timeScale = 2;
-      ballGroup.userData.jumpHeight = 2;
-      ballGroup.userData.squishTo = 0.5;
-      ballGroup.userData.timeOffset = Math.random() * 1000;
-      gridItem.add( ballGroup );
+const instancedMesh = new THREE.InstancedMesh( ballGeometry, ballMaterial, instanceCount );
+scene.add(instancedMesh);
 
-      const floorGroup = new THREE.Group();
-      const floorColor = randomColor();
-      const outlineColor = new THREE.Color(0x000000); // Black outline
-      const outlineWidth = 0.12;
-      const floorMaterial = new THREE.MeshStandardNodeMaterial({
-        color: floorColor,
-        emissive: floorColor,
-        emissiveIntensity: 0,
-        transparent: true,
-        side: THREE.DoubleSide,
-      });
-      // Add a TSL outline effect using colorNode
-      floorMaterial.colorNode = Fn(() => {
-        return vec4(floorColor, 1);
-      })();
-      
-      const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-      floor.receiveShadow = true;
-      // floor.rotation.x = - Math.PI / 2;
-      floor.position.x = (i - gridOffset) * GRID_SPACING;
-      floor.position.z = (j - gridOffset) * GRID_SPACING;
-      floor.position.y = - floorThickness / 2;
-      floorGroup.add( floor );
-
-      // Add a PointLight just above the floor tile to illuminate the ball
-      const floorLight = new THREE.PointLight(floorColor);
-      floorLight.position.set(floorGroup.position.x, floorGroup.position.y, floorGroup.position.z);
-      floorGroup.add(floorLight);
-
-      gridItem.add( floorGroup );
-
-      gridItems.push( gridItem );
-
-      scene.add( gridItem );
-    }
+// Generate positions
+const spacing = 1.3;
+for (let x = 0; x < gridSize; x++) {
+  for (let z = 0; z < gridSize; z++) {
+    positions.push([(x - gridSize / 2) * spacing, 0, (z - gridSize / 2) * spacing]);
   }
 }
 
-createGrid();
+// Use instance colors in the material
+const instanceTimeOffset = instancedBufferAttribute(timeOffsetAttribute);
+const instanceDotColor = instancedBufferAttribute(dotColorAttribute);
+const instanceBgColor = instancedBufferAttribute(bgColorAttribute);
+
+// Create polkaDots pattern and mix with instance colors
+const polkaPattern = polkaDots({
+  count: 2,
+  size: 0.56,
+  blur: 0.25,
+  color: vec3(1, 1, 1), // White pattern mask
+  background: vec3(0, 0, 0), // Black pattern mask
+  flat: 0
+});
+
+// Mix instance colors based on pattern
+const ballColor = mix(instanceBgColor, instanceDotColor, polkaPattern.r);
+
+// const ballBrightness = remap(instanceTimeOffset, 0, instanceCount, 0.7, 1);
+const ballBrightness = 1;
+
+ballMaterial.colorNode = mul(ballColor, ballBrightness);
+
+// ballMaterial.positionNode = positionWorld.add(positionView.x.mul(0.01));
 
 //  --- Lights ---
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+const ambientLight = new THREE.AmbientLight(0xffffff, 1);
 scene.add(ambientLight);
 
-const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-directionalLight.position.set(5, 10, 7.5);
-directionalLight.castShadow = true;
-scene.add(directionalLight);
-
-// const pointLight = new THREE.PointLight(0xffffff, 100);
-// pointLight.position.set(2, 10, 2);
-// pointLight.castShadow = true;
-// scene.add(pointLight);
-// const pointLight2 = new THREE.PointLight(0xffffff, 80);
-// pointLight2.position.set(-2, -2, -2);
-// scene.add(pointLight2);
+THREE.RectAreaLightNode.setLTC( RectAreaLightTexturesLib.init() ); //  only relevant for WebGPURenderer
+const intensity = 6; const width = 7; const height = 7;
+const rectLight = new THREE.RectAreaLight( 0xffffff, intensity, width, height );
+rectLight.position.set( 0, 4, 0 );
+rectLight.lookAt( 0, 0, 0 );
+scene.add( rectLight )
 
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
@@ -130,50 +110,33 @@ window.addEventListener('resize', () => {
 
 const clock = new THREE.Clock();
 function animate() {
-  const delta = clock.getDelta();
-  gridItems.forEach((gridItem) => {
-    const ballGroup = gridItem.children[0];
-    const ball = ballGroup.children[0];
-    const floorGroup = gridItem.children[1];
-    const floor = floorGroup.children[0];
-    const impactLight = gridItem.children[1].children[1];
-    const jumpHeight = ballGroup.userData.jumpHeight;
-    const squishTo = ballGroup.userData.squishTo;
-    const timeScale = ballGroup.userData.timeScale;
-    const timeOffset = ballGroup.userData.timeOffset;
-    const t = Math.abs(Math.sin((clock.getElapsedTime() + timeOffset) * timeScale)) * jumpHeight;
-    ballGroup.position.y = t;
-    if (t < 0.5) {
-      if (!ball.userData.onSurface) {
-        ball.userData.rotationAxis = ball.userData.rotationAxis === 'x' ? 'z' : 'x';
-      }
-      ballGroup.scale.y = THREE.MathUtils.mapLinear(t, 0.5, 0, 1, squishTo);
-      floorGroup.position.y = THREE.MathUtils.mapLinear(t, 0.5, 0, 0.5, 0);
-      ball.userData.onSurface = true;
+  timeUniform.value = clock.getElapsedTime();
 
-      impactLight.intensity = THREE.MathUtils.mapLinear(t, 0.5, 0, 0, 20);
-      floor.material.emissiveIntensity = THREE.MathUtils.mapLinear(t, 0.5, 0, 0, 1);
-      // ball.material.emissiveIntensity = THREE.MathUtils.mapLinear(t, 0.5, 0, 0, 0.4);
-
-    } else {
-      ball.rotation[ball.userData.rotationAxis] += delta * 8;
-      ballGroup.scale.y = 1;
-      floorGroup.position.y = 0.5;
-      ball.userData.onSurface = false;
-
-      impactLight.intensity = 0;
-      floor.material.emissiveIntensity = 0;
-      // ball.material.emissiveIntensity = 0;
-    }
-  });
+  for (let i = 0; i < positions.length; i++) {
+    const position = positions[i];
+    instancedMesh.setMatrixAt(i, new THREE.Matrix4().makeTranslation(position[0], position[1], position[2]));
+  }
+  instancedMesh.instanceMatrix.needsUpdate = true;
 
   controls.update();
   renderer.render( scene, camera );
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
 // Generate two random colors with high contrast for polka dots and background
 function randomColor() {
-  return new THREE.Color(Math.random(), Math.random(), Math.random());
+  return new THREE.Color('hsl(' + Math.random() * 360 + ', 80%, 50%)');
 }
 function luminance(color) {
   // sRGB luminance
