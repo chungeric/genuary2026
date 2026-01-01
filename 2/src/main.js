@@ -30,7 +30,7 @@ const ballGeometry = new THREE.SphereGeometry( 0.5, 32, 32 );
 const ballMaterial = new THREE.MeshStandardNodeMaterial({ side: THREE.DoubleSide });
 
 const positions = [];
-const gridSize = 30;
+const gridSize = 50;
 const instanceCount = gridSize * gridSize;
 
 // Generate colors for each instance
@@ -38,8 +38,19 @@ const dotColors = [];
 const bgColors = [];
 const timeOffsets = [];
 for (let i = 0; i < instanceCount; i++) {
-  const dotColor = randomColor();
-  const bgColor = highContrastColor(dotColor);
+  let palettes = [
+    // ["#606c38","#283618","#fefae0","#dda15e","#bc6c25"], //Olive Garden Feast
+    // ["#191716","#e6af2e","#e0e2db"], //Mystic Golden Glow
+    // ["#002642","#840032","#e59500","#e5dada","#02040f"], //Vintage Sunset
+    // ["#d9ed92","#b5e48c","#99d98c","#76c893","#52b69a","#34a0a4","#168aad","#1a759f","#1e6091","#184e77"], //Meadow Green
+    // ["#335c67","#fff3b0","#e09f3e","#9e2a2b","#540b0e"], //Dark Sunset
+    ["#1c110a","#e4d6a7","#e9b44c","#9b2915","#50a2a7"], //Sunny Side Up
+    // ["#132a13","#31572c","#4f772d","#90a955","#ecf39e"], //Leafy Green Garden
+    // ["#ef476f","#ffd166","#06d6a0","#118ab2","#073b4c"], // Watermelon Sorbet
+  ]
+  let palette = palettes[Math.floor(Math.random() * palettes.length)].slice();
+  const dotColor = new THREE.Color(palette.splice(Math.floor(Math.random() * palette.length), 1)[0]);
+  const bgColor = new THREE.Color(palette.splice(Math.floor(Math.random() * palette.length), 1)[0]);
   dotColors.push(dotColor.r, dotColor.g, dotColor.b);
   bgColors.push(bgColor.r, bgColor.g, bgColor.b);
   timeOffsets.push(i);
@@ -92,13 +103,13 @@ ballMaterial.colorNode = mul(ballColor, ballBrightness);
 // ballMaterial.positionNode = positionWorld.add(positionView.x.mul(0.01));
 
 //  --- Lights ---
-const ambientLight = new THREE.AmbientLight(0xffffff, 1);
+const ambientLight = new THREE.AmbientLight("#ccc", 0.5);
 scene.add(ambientLight);
 
 THREE.RectAreaLightNode.setLTC( RectAreaLightTexturesLib.init() ); //  only relevant for WebGPURenderer
-const intensity = 6; const width = 7; const height = 7;
+const intensity = 3; const width = 15; const height = 15;
 const rectLight = new THREE.RectAreaLight( 0xffffff, intensity, width, height );
-rectLight.position.set( 0, 4, 0 );
+rectLight.position.set( 0, 6, 0 );
 rectLight.lookAt( 0, 0, 0 );
 scene.add( rectLight )
 
@@ -135,27 +146,27 @@ function animate() {
 
 
 // Generate two random colors with high contrast for polka dots and background
-function randomColor() {
-  return new THREE.Color('hsl(' + Math.random() * 360 + ', 80%, 50%)');
-}
-function luminance(color) {
-  // sRGB luminance
-  return 0.2126 * color.r + 0.7152 * color.g + 0.0722 * color.b;
-}
-function highContrastColor(baseColor) {
-  // If base is bright, return a dark color, else return a bright color
-  const baseLum = luminance(baseColor);
-  let c;
-  if (baseLum > 0.5) {
-    // Generate dark color
-    do {
-      c = randomColor();
-    } while (luminance(c) > 0.4);
-  } else {
-    // Generate bright color
-    do {
-      c = randomColor();
-    } while (luminance(c) < 0.6);
-  }
-  return c;
-}
+// function randomColor() {
+//   return new THREE.Color('hsl(' + Math.random() * 360 + ', 80%, 50%)');
+// }
+// function luminance(color) {
+//   // sRGB luminance
+//   return 0.2126 * color.r + 0.7152 * color.g + 0.0722 * color.b;
+// }
+// function highContrastColor(baseColor) {
+//   // If base is bright, return a dark color, else return a bright color
+//   const baseLum = luminance(baseColor);
+//   let c;
+//   if (baseLum > 0.5) {
+//     // Generate dark color
+//     do {
+//       c = randomColor();
+//     } while (luminance(c) > 0.4);
+//   } else {
+//     // Generate bright color
+//     do {
+//       c = randomColor();
+//     } while (luminance(c) < 0.6);
+//   }
+//   return c;
+// }
