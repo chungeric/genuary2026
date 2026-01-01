@@ -33,8 +33,6 @@ controls.enablePan = false;
 controls.enableDamping = true;
 controls.dampingFactor = 0.1;
 
-const timeUniform = uniform(0.0);
-
 const ballGeometry = new THREE.SphereGeometry( 0.5, 32, 32 );
 const ballMaterial = new THREE.MeshStandardNodeMaterial({ side: THREE.DoubleSide, roughness: 0.35 });
 
@@ -134,7 +132,6 @@ const clock = new THREE.Clock();
 const dummy = new THREE.Object3D();
 function animate() {
   const time = clock.getElapsedTime();
-  timeUniform.value = time;
 
   // Update instance positions with noise
   for (let x = 0; x < gridSize; x++) {
@@ -142,21 +139,19 @@ function animate() {
       const index = x * gridSize + z;
       const originalPos = positions[index];
 
-      const noiseScale = 0.07;
+      const noiseScale = 0.06;
       const noiseSpeed = 0.3;
-      let n = noise3D(
+      const n = noise3D(
         originalPos[0] * noiseScale,
         originalPos[2] * noiseScale,
         time * noiseSpeed
       ); // Range -1 to 1
 
-      const y = n * 0.7; // Amplify the height
-      dummy.position.set(originalPos[0], y, originalPos[2]);
+      const posY = n * 0.7;
+      dummy.position.set(originalPos[0], posY, originalPos[2]);
 
-      dummy.rotation.y = n * Math.PI; // Rotate based on noise
-
-      const scaleY = THREE.MathUtils.mapLinear(n, -1, 1, 0.95, 1);
-      dummy.scale.set(1, scaleY, 1);
+      const rotY = THREE.MathUtils.mapLinear(n, -1, 1, 0, Math.PI * 2);
+      dummy.rotation.y = rotY;
 
       dummy.updateMatrix();
       instancedMesh.setMatrixAt(index, dummy.matrix);
