@@ -2,9 +2,8 @@
 
 import * as THREE from 'three/webgpu'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { clamp, Fn, oneMinus, positionLocal, positionWorld, smoothstep, texture, uv, vec3, vec4, instancedBufferAttribute, remap, positionView } from 'three/tsl';
-import { float, vec2, dot, sin, fract, div, floor, mod, cos, sub, mul, mix, int, Break, If, Loop, uniform } from 'three/tsl';
-import { circles, grid, polkaDots, roughClay, zebraLines } from 'tsl-textures';
+import { vec3, instancedBufferAttribute, mul, mix, uniform } from 'three/tsl';
+import { polkaDots } from 'tsl-textures';
 import { RectAreaLightTexturesLib } from 'three/addons/lights/RectAreaLightTexturesLib.js';
 import { createNoise3D } from 'simplex-noise';
 
@@ -17,19 +16,27 @@ camera.position.y = 5;
 camera.position.z = 25;
 
 // --- WebGPU Renderer  ---
-const renderer = new THREE.WebGPURenderer();
+const renderer = new THREE.WebGPURenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
 renderer.setSize( window.innerWidth, window.innerHeight );
 renderer.setAnimationLoop( animate );
 document.body.appendChild( renderer.domElement );
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.target.set(0, 0, 0);
+controls.minAzimuthAngle = Math.PI / 6;
+controls.maxAzimuthAngle = Math.PI / 6 + Math.PI / 6;
+controls.minPolarAngle = Math.PI / 4;
+controls.maxPolarAngle = Math.PI / 2.2;
+controls.minDistance = 20;
+controls.maxDistance = 50;
+controls.enablePan = false;
+controls.enableDamping = true;
+controls.dampingFactor = 0.1;
 
 const timeUniform = uniform(0.0);
 
 const ballGeometry = new THREE.SphereGeometry( 0.5, 32, 32 );
-const ballMaterial = new THREE.MeshStandardNodeMaterial({ side: THREE.DoubleSide });
-
+const ballMaterial = new THREE.MeshStandardNodeMaterial({ side: THREE.DoubleSide, roughness: 0.7, metalness: 0.3 });
 
 const gridSize = 50;
 const instanceCount = gridSize * gridSize;
@@ -109,9 +116,9 @@ const ambientLight = new THREE.AmbientLight("#ccc", 0.5);
 scene.add(ambientLight);
 
 THREE.RectAreaLightNode.setLTC( RectAreaLightTexturesLib.init() ); //  only relevant for WebGPURenderer
-const intensity = 3; const width = 15; const height = 15;
+const intensity = 3.3; const width = 12; const height = 12;
 const rectLight = new THREE.RectAreaLight( 0xffffff, intensity, width, height );
-rectLight.position.set( 0, 6, 0 );
+rectLight.position.set( 0, 7, 0 );
 rectLight.lookAt( 0, 0, 0 );
 scene.add( rectLight )
 
@@ -124,11 +131,10 @@ window.addEventListener('resize', () => {
 const noise3D = createNoise3D();
 
 const clock = new THREE.Clock();
+const dummy = new THREE.Object3D();
 function animate() {
   const time = clock.getElapsedTime();
   timeUniform.value = time;
-
-  const dummy = new THREE.Object3D();
 
   // Update instance positions with noise
   for (let x = 0; x < gridSize; x++) {
@@ -144,7 +150,7 @@ function animate() {
         time * noiseSpeed
       ); // Range -1 to 1
 
-      const y = n * 0.7; // Amplify the height
+      const y = n * 0.6; // Amplify the height
       dummy.position.set(originalPos[0], y, originalPos[2]);
 
       dummy.rotation.y = n * Math.PI; // Rotate based on noise
