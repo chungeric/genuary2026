@@ -11,9 +11,9 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x000000);
 scene.fog = new THREE.Fog(0x000000, 50, 60);
 const camera = new THREE.PerspectiveCamera( 10, window.innerWidth / window.innerHeight, 0.1, 1000 );
-camera.position.x = 25;
+camera.position.x = 30;
 camera.position.y = 5;
-camera.position.z = 25;
+camera.position.z = 30;
 
 // --- WebGPU Renderer  ---
 const renderer = new THREE.WebGPURenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
@@ -25,8 +25,8 @@ const controls = new OrbitControls(camera, renderer.domElement);
 controls.target.set(0, 0, 0);
 controls.minAzimuthAngle = Math.PI / 6;
 controls.maxAzimuthAngle = Math.PI / 6 + Math.PI / 6;
-controls.minPolarAngle = Math.PI / 4;
-controls.maxPolarAngle = Math.PI / 2.2;
+controls.minPolarAngle = 0;
+controls.maxPolarAngle = Math.PI / 8 * 3.6;
 controls.minDistance = 20;
 controls.maxDistance = 50;
 controls.enablePan = false;
@@ -36,26 +36,26 @@ controls.dampingFactor = 0.1;
 const timeUniform = uniform(0.0);
 
 const ballGeometry = new THREE.SphereGeometry( 0.5, 32, 32 );
-const ballMaterial = new THREE.MeshStandardNodeMaterial({ side: THREE.DoubleSide, roughness: 0.7, metalness: 0.3 });
+const ballMaterial = new THREE.MeshStandardNodeMaterial({ side: THREE.DoubleSide, roughness: 0.35 });
 
-const gridSize = 50;
+const gridSize = 30;
 const instanceCount = gridSize * gridSize;
 
 // Generate colors for each instance
 const dotColors = [];
 const bgColors = [];
 const timeOffsets = [];
+let palettes = [
+  // ["#606c38","#283618","#fefae0","#dda15e","#bc6c25"], //Olive Garden Feast
+  // ["#191716","#e6af2e","#e0e2db"], //Mystic Golden Glow
+  // ["#002642","#840032","#e59500","#e5dada","#02040f"], //Vintage Sunset
+  // ["#d9ed92","#b5e48c","#99d98c","#76c893","#52b69a","#34a0a4","#168aad","#1a759f","#1e6091","#184e77"], //Meadow Green
+  // ["#335c67","#fff3b0","#e09f3e","#9e2a2b","#540b0e"], //Dark Sunset
+  ["#1c110a","#e4d6a7","#e9b44c","#9b2915","#50a2a7"], //Sunny Side Up
+  // ["#132a13","#31572c","#4f772d","#90a955","#ecf39e"], //Leafy Green Garden
+  // ["#ef476f","#ffd166","#06d6a0","#118ab2","#073b4c"], // Watermelon Sorbet
+];
 for (let i = 0; i < instanceCount; i++) {
-  let palettes = [
-    // ["#606c38","#283618","#fefae0","#dda15e","#bc6c25"], //Olive Garden Feast
-    // ["#191716","#e6af2e","#e0e2db"], //Mystic Golden Glow
-    // ["#002642","#840032","#e59500","#e5dada","#02040f"], //Vintage Sunset
-    // ["#d9ed92","#b5e48c","#99d98c","#76c893","#52b69a","#34a0a4","#168aad","#1a759f","#1e6091","#184e77"], //Meadow Green
-    // ["#335c67","#fff3b0","#e09f3e","#9e2a2b","#540b0e"], //Dark Sunset
-    ["#1c110a","#e4d6a7","#e9b44c","#9b2915","#50a2a7"], //Sunny Side Up
-    // ["#132a13","#31572c","#4f772d","#90a955","#ecf39e"], //Leafy Green Garden
-    // ["#ef476f","#ffd166","#06d6a0","#118ab2","#073b4c"], // Watermelon Sorbet
-  ]
   let palette = palettes[Math.floor(Math.random() * palettes.length)].slice();
   const dotColor = new THREE.Color(palette.splice(Math.floor(Math.random() * palette.length), 1)[0]);
   const bgColor = new THREE.Color(palette.splice(Math.floor(Math.random() * palette.length), 1)[0]);
@@ -116,8 +116,8 @@ const ambientLight = new THREE.AmbientLight("#ccc", 0.5);
 scene.add(ambientLight);
 
 THREE.RectAreaLightNode.setLTC( RectAreaLightTexturesLib.init() ); //  only relevant for WebGPURenderer
-const intensity = 3.3; const width = 12; const height = 12;
-const rectLight = new THREE.RectAreaLight( 0xffffff, intensity, width, height );
+const intensity = 3; const width = 12; const height = 12;
+const rectLight = new THREE.RectAreaLight( "#fff5cb", intensity, width, height );
 rectLight.position.set( 0, 7, 0 );
 rectLight.lookAt( 0, 0, 0 );
 scene.add( rectLight )
