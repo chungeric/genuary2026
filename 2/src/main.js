@@ -5,14 +5,15 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { vec3, instancedBufferAttribute, mul, mix, uniform } from 'three/tsl';
 import { polkaDots } from 'tsl-textures';
 import { RectAreaLightTexturesLib } from 'three/addons/lights/RectAreaLightTexturesLib.js';
-import { createNoise3D } from 'simplex-noise';
+import { recordCanvas } from './recordCanvas';
+import gsap from 'gsap';
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x000000);
-// scene.fog = new THREE.Fog(0x000000, 50, 60);
+scene.fog = new THREE.Fog(0x000000, 50, 60);
 const camera = new THREE.PerspectiveCamera( 10, window.innerWidth / window.innerHeight, 0.1, 1000 );
 camera.position.x = 30;
-camera.position.y = 18;
+camera.position.y = 5;
 camera.position.z = 30;
 
 // --- WebGPU Renderer  ---
@@ -26,7 +27,7 @@ controls.target.set(0, 0, 0);
 controls.minAzimuthAngle = Math.PI / 6;
 controls.maxAzimuthAngle = Math.PI / 6 + Math.PI / 6;
 controls.minPolarAngle = 0;
-controls.maxPolarAngle = Math.PI / 8 * 3;
+controls.maxPolarAngle = Math.PI / 8 * 3.6;
 controls.minDistance = 20;
 controls.maxDistance = 50;
 controls.enablePan = false;
@@ -126,36 +127,82 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-const noise3D = createNoise3D();
+// Track Y positions, scales, rotations, and active animations
+const yPositions = new Array(instanceCount).fill(0);
+const scaleY = new Array(instanceCount).fill(1);
+const rotY = new Array(instanceCount).fill(0);
+const animatingIndices = new Set();
+const peakY = 2;
 
-const clock = new THREE.Clock();
-const dummy = new THREE.Object3D();
-function animate() {
-  const time = clock.getElapsedTime();
+// Frustum for viewport checking
+const frustum = new THREE.Frustum();
+const projScreenMatrix = new THREE.Matrix4();
 
-  // Update instance positions with noise
-  for (let x = 0; x < gridSize; x++) {
-    for (let z = 0; z < gridSize; z++) {
-      const index = x * gridSize + z;
-      const originalPos = positions[index];
+function getVisibleIndices() {
+  projScreenMatrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+  frustum.setFromProjectionMatrix(projScreenMatrix);
 
-      const noiseScale = 0.06;
-      const noiseSpeed = 0.3;
-      const n = noise3D(
-        originalPos[0] * noiseScale,
-        originalPos[2] * noiseScale,
-        time * noiseSpeed
-      ); // Range -1 to 1
-
-      const posY = n * 0.7;
-      dummy.position.set(originalPos[0], posY, originalPos[2]);
-
-      const rotY = THREE.MathUtils.mapLinear(n, -1, 1, 0, Math.PI * 2);
-      dummy.rotation.y = rotY;
-
-      dummy.updateMatrix();
-      instancedMesh.setMatrixAt(index, dummy.matrix);
+  const visible = [];
+  for (let i = 0; i < instanceCount; i++) {
+    const pos = positions[i];
+    if (frustum.containsPoint(new THREE.Vector3(pos[0], 0, pos[2]))) {
+      visible.push(i);
     }
+  }
+  return visible;
+}
+
+// Pick a random visible grid item every 200ms
+setInterval(() => {
+  const visibleIndices = getVisibleIndices();
+  if (visibleIndices.length === 0) return;
+
+  const randomIndex = visibleIndices[Math.floor(Math.random() * visibleIndices.length)];
+  if (!animatingIndices.has(randomIndex)) {
+    animatingIndices.add(randomIndex);
+
+    // Timeline for coordinated Y and scale animation
+    const tl = gsap.timeline({
+      onComplete: () => animatingIndices.delete(randomIndex)
+    });
+
+    // Squeeze
+    tl.to(scaleY, { [randomIndex]: 0.5, duration: 0.5 }, 0);
+    tl.to(rotY, { [randomIndex]: -Math.PI / 2, duration: 0.5 }, 0);
+
+    // Pop
+    tl.to(yPositions, { [randomIndex]: peakY, duration: 0.5, ease: "power2.out" }, 0.5);
+    tl.to(scaleY, { [randomIndex]: 1.3, duration: 0.2, ease: "power2.out" }, 0.5);
+    tl.to(rotY, { [randomIndex]: Math.PI / 2, duration: 0.7, ease: "power2.out" }, 0.5);
+    tl.to(scaleY, { [randomIndex]: 1, duration: 0.2 }, 0.7);
+
+    // Rotation (tweak these values)
+
+    // Fall
+    tl.to(yPositions, { [randomIndex]: 0, duration: 0.7, ease: "bounce.out" });
+  }
+}, 200);
+
+// Initialize all instances at their starting positions
+const dummy = new THREE.Object3D();
+for (let i = 0; i < instanceCount; i++) {
+  const pos = positions[i];
+  dummy.position.set(pos[0], 0, pos[2]);
+  dummy.rotation.y = 0;
+  dummy.updateMatrix();
+  instancedMesh.setMatrixAt(i, dummy.matrix);
+}
+instancedMesh.instanceMatrix.needsUpdate = true;
+
+function animate() {
+  // Update all instance matrices based on current yPositions, scaleY, and rotY
+  for (let i = 0; i < instanceCount; i++) {
+    const originalPos = positions[i];
+    dummy.position.set(originalPos[0], yPositions[i], originalPos[2]);
+    dummy.rotation.y = rotY[i];
+    dummy.scale.set(1, scaleY[i], 1);
+    dummy.updateMatrix();
+    instancedMesh.setMatrixAt(i, dummy.matrix);
   }
   instancedMesh.instanceMatrix.needsUpdate = true;
 
@@ -164,6 +211,11 @@ function animate() {
 }
 
 
+window.addEventListener('keydown', (event) => {
+  if (event.key === 'r') {
+    recordCanvas(renderer.domElement, 5000);
+  }
+});
 
 
 

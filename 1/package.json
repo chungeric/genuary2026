@@ -12,6 +12,8 @@
     "vite": "^7.2.4"
   },
   "dependencies": {
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/util": "^0.12.2",
     "p5": "^2.1.2",
     "three": "^0.182.0"
   }

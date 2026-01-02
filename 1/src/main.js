@@ -3,6 +3,7 @@ import * as THREE from 'three/webgpu'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Fn, sin, uniform, uv, vec4, clamp, vec2, distance, step, smoothstep } from 'three/tsl'
 import { mapLinear } from 'three/src/math/MathUtils.js';
+import { recordCanvas } from './recordCanvas.js';
 
 const randomColour = new THREE.Color(Math.random(), Math.random(), Math.random());
 
@@ -152,6 +153,12 @@ window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+window.addEventListener('keydown', (event) => {
+  if (event.key === 'r') {
+    recordCanvas(renderer.domElement, 5000);
+  }
 });
 
 let lastTime = performance.now();
