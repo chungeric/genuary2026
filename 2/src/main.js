@@ -154,6 +154,9 @@ function getVisibleIndices() {
 
 // Pick a random visible grid item every 200ms
 setInterval(() => {
+  // Only run if the tab/window is active
+  if (document.visibilityState !== 'visible') return;
+
   const visibleIndices = getVisibleIndices();
   if (visibleIndices.length === 0) return;
 
