@@ -214,11 +214,11 @@ function animate() {
 }
 
 
-window.addEventListener('keydown', (event) => {
-  if (event.key === 'r') {
-    recordCanvas(renderer.domElement, 5000);
-  }
-});
+// window.addEventListener('keydown', (event) => {
+//   if (event.key === 'r') {
+//     recordCanvas(renderer.domElement, 5000);
+//   }
+// });
 
 
 

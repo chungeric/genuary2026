@@ -20,7 +20,7 @@ camera.position.z = 20;
 // document.body.appendChild( renderer.domElement );
 
 // --- WebGPU Renderer  ---
-const renderer = new THREE.WebGPURenderer();
+const renderer = new THREE.WebGPURenderer({ alpha: false, powerPreference: "high-performance" });
 renderer.setSize( window.innerWidth, window.innerHeight );
 renderer.setAnimationLoop( animate );
 document.body.appendChild( renderer.domElement );
@@ -101,8 +101,8 @@ const PLANE_COUNT = 500;
 // const FALL_SPEED_MIN = 0.02;
 // const FALL_SPEED_MAX = 0.02;
 const FALL_SPEED = 0.02;
-const ROTATE_SPEED_MIN = 0.005;
-const ROTATE_SPEED_MAX = 0.05;
+const ROTATE_SPEED_MIN = 1;
+const ROTATE_SPEED_MAX = 2;
 const Y_MIN = -7;
 const Y_MAX = 7;
 const X_MIN = -4;
@@ -155,11 +155,11 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-window.addEventListener('keydown', (event) => {
-  if (event.key === 'r') {
-    recordCanvas(renderer.domElement, 5000);
-  }
-});
+// window.addEventListener('keydown', (event) => {
+//   if (event.key === 'r') {
+//     recordCanvas(renderer.domElement, 5000);
+//   }
+// });
 
 let lastTime = performance.now();
 const dummy = new THREE.Object3D();
@@ -174,7 +174,7 @@ function animate() {
     // Update position and rotation
     positions[i][1] -= FALL_SPEED * delta * 60;
     // rotations[i][0] += rotateSpeeds[i] * (0.5 + Math.random()) * delta * 60; // x
-    rotations[i][1] += rotateSpeeds[i] * (0.5 + Math.random()) * delta * 60; // y
+    rotations[i][1] += delta * rotateSpeeds[i]; // y
     // rotations[i][2] += rotateSpeeds[i] * (0.5 + Math.random()) * delta * 60; // z
     if (positions[i][1] < Y_MIN) {
       positions[i][1] = Y_MAX;
