@@ -7,9 +7,10 @@ import gsap from 'gsap';
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x000000);
-const camera = new THREE.PerspectiveCamera( 20, window.innerWidth / window.innerHeight, 0.1, 100000 );
-camera.position.z = 70;
-camera.position.y = -160;
+scene.fog = new THREE.Fog(0x000000, 10, 1000);
+const camera = new THREE.PerspectiveCamera( 30, window.innerWidth / window.innerHeight, 0.1, 100000 );
+camera.position.z = 60;
+// camera.position.y = 100;
 
 const renderer = new THREE.WebGPURenderer();
 renderer.setSize( window.innerWidth, window.innerHeight );
@@ -32,7 +33,7 @@ const directions = [
 const center = new THREE.Vector2(1, 0);
 let directionIndex = 0;
 
-for (let i = 0; i < 12; i++) {
+for (let i = 0; i < 15; i++) {
   let value;
   if (i === 0 || i === 1) {
     value = 1;
@@ -59,23 +60,23 @@ for (let i = 0; i < 12; i++) {
   }
 }
 
-const points = path.getPoints();
-const points3d = points.map((p, i) => new THREE.Vector3(p.x, p.y, 0));
+const instances = 100;
 
-const geometry = new THREE.BufferGeometry().setFromPoints(points3d);
+const points = path.getPoints(instances).map((p, i) => new THREE.Vector3(p.x, p.y, 0));
+
+const geometry = new THREE.BufferGeometry().setFromPoints(points);
 const material = new THREE.LineBasicMaterial({ color: 0xff0000 });
-const line = new THREE.Line(geometry, material);
-line.visible = false;
-scene.add(line);
+const fibSpiralLine = new THREE.Line(geometry, material);
+fibSpiralLine.visible = false;
+scene.add(fibSpiralLine);
 
-// Create spheres for sampled points
 const cubeGeometry = new THREE.BoxGeometry(1, 1, 1);
-const cubeMaterial = new THREE.MeshNormalMaterial({ color: 0x00ff00 });
-const sampledSpheres = [];
+const cubeMaterial = new THREE.MeshNormalMaterial();
 
-// Frustum for checking if point is in viewport
-const frustum = new THREE.Frustum();
-const projectionMatrix = new THREE.Matrix4();
+const cubesMesh = new THREE.InstancedMesh(cubeGeometry, cubeMaterial, instances);
+scene.add(cubesMesh);
+
+const cubes = generateCubes(instances);
 
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
@@ -83,116 +84,118 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-let scale = 1;
-let clock = new THREE.Clock();
-let lastSampleTime = 0;
-let currentPointIndex = 0; // Track which point along the path we're at
+const clock = new THREE.Clock();
 
-function isPointInFrustum(point) {
-  camera.updateMatrixWorld();
-  projectionMatrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
-  frustum.setFromProjectionMatrix(projectionMatrix);
-  return frustum.containsPoint(point);
-}
-
-function spawnCubeAtCurrentPoint() {
-  const tempPosition = new THREE.Vector3();
-  
-  // Get the current point along the path
-  tempPosition.copy(points3d[currentPointIndex]);
-  
-  // Apply current scale transformation
-  tempPosition.multiplyScalar(scale);
-  
-  const cube = new THREE.Mesh(cubeGeometry, cubeMaterial.clone());
-    cube.position.copy(tempPosition);
-    
-    // Start with scale 0 and full opacity
-    cube.scale.set(0, 0, 0);
-    cube.material.opacity = 1;
-    cube.material.transparent = true;
-    
-    scene.add(cube);
-    sampledSpheres.push(cube);
-    
-    // Pop in animation
-    gsap.to(cube.scale, {
-      x: (currentPointIndex / points3d.length) * 6,
-      y: (currentPointIndex / points3d.length) * 6,
-      z: (currentPointIndex / points3d.length) * 6,
-      duration: 0.5,
-      ease: "back.out(1.7)"
-    });
-
-    gsap.to(cube.rotation, {
-      x: Math.random() * Math.PI,
-      y:  Math.random() * Math.PI,
-      duration: 0.3,
-      ease: "power2.out"
-    });
-
-    const randomDirectionVector = new THREE.Vector3(
-      (Math.random() - 0.5) * 2,
-      (Math.random() - 0.5) * 2,
-      (Math.random() - 0.5) * 2
-    ).normalize().multiplyScalar(2);
-    gsap.to(cube.position, {
-      x: cube.position.x + randomDirectionVector.x,
-      y: cube.position.y + randomDirectionVector.y,
-      z: cube.position.z + randomDirectionVector.z,
-      duration: 0.3,
-      ease: "power2.out"
-    });
-    
-    // Fade out and remove after delay
-    gsap.to(cube.material, {
-      opacity: 0,
-      duration: 0.5,
-      delay: 0.6,
-      ease: "power2.inOut",
-      onComplete: () => {
-        scene.remove(cube);
-        const index = sampledSpheres.indexOf(cube);
-        if (index > -1) {
-          sampledSpheres.splice(index, 1);
-        }
-        cube.geometry.dispose();
-        cube.material.dispose();
-      }
-    });
-  
-  // Move to next point, skip some points for spacing
-  currentPointIndex = (currentPointIndex + 3) % points3d.length;
-}
-
-let minScale = sequence[sequence.length-5]/sequence[sequence.length-1];
-console.log('minScale', minScale);
+const dummy = new THREE.Object3D();
 
 function animate() {
-  const elapsed = clock.getElapsedTime();
-  
-  // Spawn cube at current point along path
-  if (elapsed - lastSampleTime >= 0.01) {
-    spawnCubeAtCurrentPoint();
-    lastSampleTime = elapsed;
-  }
-  
-  line.scale.set(scale, scale, scale);
-  
-  // Update sphere positions to match line scale
-  sampledSpheres.forEach(sphere => {
-    const originalPos = sphere.userData.originalPosition || sphere.position.clone();
-    if (!sphere.userData.originalPosition) {
-      sphere.userData.originalPosition = originalPos.clone();
+  const t = clock.getElapsedTime();
+  fibSpiralLine.rotation.z = t;
+  fibSpiralLine.updateMatrixWorld();
+
+  for (let i = 0; i < cubes.length; i++) {
+    const {
+      position, originalPosition, targetPosition,
+      scale, currentScale, targetScale,
+      rotation, currentRotation, targetRotation,
+    } = cubes[i];
+
+    const animationStarted = t > (i * 0.05);
+
+    if (animationStarted && !cubes[i].isAnimating) {
+      cubes[i].isAnimating = true;
+      const tl = gsap.timeline();
+      tl.to(position, {
+        x: targetPosition.x,
+        y: targetPosition.y,
+        z: targetPosition.z,
+        duration: 1,
+        ease: "power2.out",
+      }, 0);
+      tl.to(cubes[i], {
+        scale: targetScale,
+        duration: 1,
+        ease: "power2.out",
+      }, 0);
+      tl.to(rotation, {
+        x: targetRotation.x,
+        y: targetRotation.y,
+        z: targetRotation.z,
+        duration: 1,
+        ease: "power2.out",
+      }, 0);
+      tl.to(cubes[i], {
+        scale: 0,
+        duration: 0.2,
+        delay: 0.1,
+        ease: "power2",
+        onComplete: () => {
+          const rotatedOriginalPosition = new THREE.Vector3(originalPosition.x, originalPosition.y, originalPosition.z);
+          rotatedOriginalPosition.applyMatrix4(fibSpiralLine.matrixWorld);
+          cubes[i].position = rotatedOriginalPosition.clone();
+          const targetPositionRandomDirection = new THREE.Vector3(
+            THREE.MathUtils.mapLinear(Math.random(), 0, 1, -1, 1),
+            THREE.MathUtils.mapLinear(Math.random(), 0, 1, -1, 1),
+            THREE.MathUtils.mapLinear(Math.random(), 0, 1, -1, 1)
+          ).normalize();
+          const targetPositionRandomDistance = THREE.MathUtils.mapLinear(Math.random(), 0, 1, 1, 1.5);
+          const targetPos = rotatedOriginalPosition.clone().addScaledVector(targetPositionRandomDirection, targetPositionRandomDistance);
+          targetPos.z = i * 0.4;
+          cubes[i].targetPosition = targetPos;
+          cubes[i].rotation = new THREE.Euler(0, 0, 0);
+          cubes[i].scale = 0;
+        }
+      }, 1);
+      
+      tl.set(cubes[i], { isAnimating: false }, 1.3);
     }
-  });
+    
+    // const rotatedOriginalPoint = new THREE.Vector3(originalPosition.x, originalPosition.y, originalPosition.z);
+    // rotatedOriginalPoint.applyMatrix4(fibSpiralLine.matrixWorld);
+    dummy.position.copy(position);
+    dummy.scale.set(scale, scale, scale);
+    dummy.rotation.set(rotation.x, rotation.y, rotation.z);
+    
+    dummy.updateMatrix();
+    cubesMesh.setMatrixAt(i, dummy.matrix);
+  }
+  cubesMesh.instanceMatrix.needsUpdate = true;
   
   controls.update();
   renderer.render(scene, camera);
+}
 
-  // scale *= 0.99;
-
-  // if (scale <= minScale) {
-  //   scale = 1;
-  // }
+function generateCubes(instances) {
+  const cubes = [];
+  for (let i = 0; i < instances; i++) {
+    const t = i / instances;
+    const pointIndex = Math.floor(t * (points.length - 1));
+    const point = points[pointIndex];
+    const targetPositionRandomDirection = new THREE.Vector3(
+      THREE.MathUtils.mapLinear(Math.random(), 0, 1, -1, 1),
+      THREE.MathUtils.mapLinear(Math.random(), 0, 1, -1, 1),
+      THREE.MathUtils.mapLinear(Math.random(), 0, 1, -1, 1)
+    ).normalize();
+    const targetPositionRandomDistance = THREE.MathUtils.mapLinear(Math.random(), 0, 1, 1, 1.5);
+    const targetPos = point.clone().addScaledVector(targetPositionRandomDirection, targetPositionRandomDistance);
+    targetPos.z = i * 0.4;
+    const obj = {
+      position: point.clone(),
+      originalPosition: point.clone(),
+      targetPosition: targetPos,
+      scale: 0,
+      currentScale: 0,
+      targetScale: THREE.MathUtils.mapLinear(i, 0, instances, 0.3, 4),
+      rotation: new THREE.Euler(0, 0, 0),
+      currentRotation: new THREE.Euler(0, 0, 0),
+      targetRotation: new THREE.Euler(
+        THREE.MathUtils.mapLinear(Math.random(), 0, 1, 0, Math.PI),
+        THREE.MathUtils.mapLinear(Math.random(), 0, 1, 0, Math.PI),
+        THREE.MathUtils.mapLinear(Math.random(), 0, 1, 0, Math.PI)
+      ),
+      isAnimating: false,
+    };
+    cubes.push(obj);
+  }
+  return cubes;
 }
