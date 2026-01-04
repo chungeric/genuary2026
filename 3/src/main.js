@@ -5,6 +5,7 @@ import { Fn, sin, uniform, uv, vec4, clamp } from 'three/tsl'
 import gsap from 'gsap';
 import { RectAreaLightTexturesLib } from 'three/addons/lights/RectAreaLightTexturesLib.js';
 import { RectAreaLightHelper } from 'three/addons/helpers/RectAreaLightHelper.js';
+import { recordCanvas } from './recordCanvas';
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x000000);
@@ -228,3 +229,5 @@ function generateCubes(instances) {
   }
   return cubes;
 }
+
+// recordCanvas(renderer.domElement, 10000);
