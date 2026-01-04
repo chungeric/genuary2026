@@ -6,6 +6,7 @@ import { createNoise2D } from 'simplex-noise';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPixelatedPass } from 'three/addons/postprocessing/RenderPixelatedPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { recordCanvas } from './recordCanvas';
 
 const noise2D = createNoise2D();
 
@@ -161,3 +162,9 @@ function animate() {
   // renderer.render( scene, camera );
   composer.render();
 }
+
+// window.addEventListener('keydown', (event) => {
+//   if (event.key === 'r') {
+//     recordCanvas(renderer.domElement, 10000);
+//   }
+// });
