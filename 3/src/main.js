@@ -2,12 +2,13 @@
 import * as THREE from 'three/webgpu'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Fn, sin, uniform, uv, vec4, clamp } from 'three/tsl'
-import { MeshSurfaceSampler } from 'three/addons/math/MeshSurfaceSampler.js';
 import gsap from 'gsap';
+import { RectAreaLightTexturesLib } from 'three/addons/lights/RectAreaLightTexturesLib.js';
+import { RectAreaLightHelper } from 'three/addons/helpers/RectAreaLightHelper.js';
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x000000);
-scene.fog = new THREE.Fog(0x000000, 10, 1000);
+scene.fog = new THREE.Fog(0x000000, 55, 60);
 const camera = new THREE.PerspectiveCamera( 30, window.innerWidth / window.innerHeight, 0.1, 100000 );
 camera.position.z = 60;
 // camera.position.y = 100;
@@ -18,7 +19,15 @@ renderer.setAnimationLoop( animate );
 document.body.appendChild( renderer.domElement );
 
 const controls = new OrbitControls(camera, renderer.domElement);
-// controls.target.set(0, -10, 0);
+controls.minAzimuthAngle = -Math.PI / 8;
+controls.maxAzimuthAngle = Math.PI / 8;
+controls.minPolarAngle = Math.PI / 8 * 3;
+controls.maxPolarAngle = Math.PI / 8 * 5;
+controls.enablePan = false;
+controls.minDistance = 60;
+controls.maxDistance = 70;
+controls.enableDamping = true;
+controls.dampingFactor = 0.05;
 
 const path = new THREE.Path();
 path.moveTo(0, 0);
@@ -71,12 +80,33 @@ fibSpiralLine.visible = false;
 scene.add(fibSpiralLine);
 
 const cubeGeometry = new THREE.BoxGeometry(1, 1, 1);
-const cubeMaterial = new THREE.MeshNormalMaterial();
+const cubeMaterial = new THREE.MeshStandardMaterial();
 
 const cubesMesh = new THREE.InstancedMesh(cubeGeometry, cubeMaterial, instances);
 scene.add(cubesMesh);
 
-const cubes = generateCubes(instances);
+const lightColor = new THREE.Color("#eb2525");
+
+THREE.RectAreaLightNode.setLTC( RectAreaLightTexturesLib.init() ); //  only relevant for WebGPURenderer
+const rectLight1 = new THREE.RectAreaLight( lightColor, 1, 20, 20 );
+rectLight1.position.set( -15, 0, -5 );
+rectLight1.lookAt( 0, 0, 15 );
+scene.add( rectLight1 )
+const rectLight2 = new THREE.RectAreaLight( lightColor, 1, 20, 20 );
+rectLight2.position.set( 15, 0, -5 );
+rectLight2.lookAt( 0, 0, 15 );
+scene.add( rectLight2 )
+const rectLight3 = new THREE.RectAreaLight( lightColor, 2, 30, 30 );
+rectLight3.position.set( 0, -20, 20 );
+rectLight3.lookAt( 0, 0, 0 );
+scene.add( rectLight3 )
+const rectLight4 = new THREE.RectAreaLight( lightColor, 1, 10, 10 );
+rectLight4.position.set( 0, 20, 20 );
+rectLight4.lookAt( 0, 0, 0 );
+scene.add( rectLight4 )
+
+// const helper = new RectAreaLightHelper( rectLight2 );
+// rectLight2.add( helper );
 
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
@@ -85,9 +115,8 @@ window.addEventListener('resize', () => {
 });
 
 const clock = new THREE.Clock();
-
 const dummy = new THREE.Object3D();
-
+const cubes = generateCubes(instances);
 function animate() {
   const t = clock.getElapsedTime();
   fibSpiralLine.rotation.z = t;
