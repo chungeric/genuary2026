@@ -23,7 +23,8 @@ import {
   floor,
   instanceIndex,
   hash,
-  oneMinus
+  oneMinus,
+  PI2
 } from 'three/tsl';
 import { recordCanvas } from './recordCanvas.js';
 
@@ -164,7 +165,7 @@ drawingCanvas.addEventListener('touchmove', (e) => {
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x000000);
 const camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 0.1, 1000 );
-camera.position.z = 10;
+camera.position.z = 5;
 
 const renderer = new THREE.WebGPURenderer();
 renderer.setSize( window.innerWidth, window.innerHeight );
@@ -187,33 +188,34 @@ debugMaterial.colorNode = Fn(() => {
 const debugPlane = new THREE.Mesh( geometry, debugMaterial );
 // scene.add( debugPlane );
 
-const count = 200;
-const spriteMaterial = new THREE.MeshBasicNodeMaterial({  wireframe: false, side: THREE.DoubleSide, transparent: true  });
-// spriteMaterial.depthWrite = true;
-// spriteMaterial.depthTest = true;
+const count = 50;
+const spriteMaterial = new THREE.MeshBasicNodeMaterial({  wireframe: false, side: THREE.DoubleSide  });
+// spriteMaterial.depthWrite = false;
 
 const randomSampleX = floor(range(0, 3));
 const randomSampleY = floor(range(0, 3));
 const drawingCanvasSample = texture(canvasTexture, uv().div(3).add(vec2(randomSampleX.div(3), randomSampleY.div(3))));
+
 
 spriteMaterial.colorNode = Fn(() => {
   const randomColor = vec3(range(0, 1), range(0, 1), range(0, 1));
   return oneMinus(vec3(drawingCanvasSample.r)).mul(randomColor);
 })();
 
+const randomRotation = vec3(
+  hash(float(instanceIndex)).mul(PI2),
+  hash(float(instanceIndex).add(100)).mul(PI2),
+  hash(float(instanceIndex).add(200)).mul(PI2)
+);
+
+const posRange = 2.5;
+const randomPosition = vec3(
+  range(-posRange, posRange),
+  range(-posRange, posRange),
+  range(-posRange, posRange)
+);
+
 spriteMaterial.positionNode = Fn(() => {
-  const posRange = 4;
-  const randomPosition = vec3(
-    range(-posRange, posRange),
-    range(-posRange, posRange),
-    range(-posRange, posRange)
-  );
-  const randomRotation = vec3(
-    range(0, PI.mul(2)),
-    range(0, PI.mul(2)),
-    range(0, PI.mul(2))
-  );
-  
   // Start with the local vertex position, then offset by instance position
   const pos = positionLocal.add(randomPosition);
 
@@ -224,12 +226,19 @@ spriteMaterial.positionNode = Fn(() => {
   );
 })();
 
-spriteMaterial.opacityNode = oneMinus(vec3(drawingCanvasSample.r));
+// spriteMaterial.normalNode = Fn(() => {
+//   return normalize(rotate(normalLocal, randomRotation));
+// })();
+
+// spriteMaterial.opacityNode = oneMinus(drawingCanvasSample.r);
 
 // spriteMaterial.alphaTestNode = drawingCanvasSample;
 // spriteMaterial.alphaToCoverage = true;
 
-const points = new THREE.Sprite( spriteMaterial );
+const planeGeometry = new THREE.PlaneGeometry(0.5, 0.5, 1, 1);
+
+// const points = new THREE.Sprite( spriteMaterial );
+const points = new THREE.Mesh( planeGeometry, spriteMaterial );
 points.count = count;
 scene.add( points );
 
@@ -247,15 +256,15 @@ function animate() {
   renderer.render( scene, camera );
 }
 
-// window.addEventListener('keydown', (e) => {
-  // if (e.key === '1') {
-  //   recordCanvas(drawingCanvas, 30000);
-  // }
-  // if (e.key === '2') {
-  //   console.log('recording 3d canvas');
-  //   recordCanvas(renderer.domElement, 50000);
-  // }
-// });
+window.addEventListener('keydown', (e) => {
+  if (e.key === '1') {
+    recordCanvas(drawingCanvas, 30000);
+  }
+  if (e.key === '2') {
+    console.log('recording 3d canvas');
+    recordCanvas(renderer.domElement, 50000);
+  }
+});
 
 const button = document.createElement('button');
 button.style.position = 'fixed';
