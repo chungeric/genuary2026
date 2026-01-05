@@ -256,15 +256,15 @@ function animate() {
   renderer.render( scene, camera );
 }
 
-window.addEventListener('keydown', (e) => {
-  if (e.key === '1') {
-    recordCanvas(drawingCanvas, 30000);
-  }
-  if (e.key === '2') {
-    console.log('recording 3d canvas');
-    recordCanvas(renderer.domElement, 50000);
-  }
-});
+// window.addEventListener('keydown', (e) => {
+//   if (e.key === '1') {
+//     recordCanvas(drawingCanvas, 30000);
+//   }
+//   if (e.key === '2') {
+//     console.log('recording 3d canvas');
+//     recordCanvas(renderer.domElement, 50000);
+//   }
+// });
 
 const button = document.createElement('button');
 button.style.position = 'fixed';
