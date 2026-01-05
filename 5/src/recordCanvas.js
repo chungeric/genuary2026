@@ -24,6 +24,7 @@ function recordCanvas(canvas, time) {
     a.append("Download video");
     document.body.append(a);
     console.log(a);
+    a.click();
   }
 
   const recorder = new MediaRecorder(canvas.captureStream(frameRate), {

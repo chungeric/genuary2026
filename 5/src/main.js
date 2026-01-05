@@ -22,25 +22,23 @@ import {
   range,
   floor,
   instanceIndex,
-  hash
+  hash,
+  oneMinus
 } from 'three/tsl';
-
+import { recordCanvas } from './recordCanvas.js';
 
 // Create a drawing canvas
 const drawingCanvas = document.createElement('canvas');
 drawingCanvas.width = 512;
 drawingCanvas.height = 512;
-drawingCanvas.style.position = 'fixed';
-drawingCanvas.style.top = '0';
-drawingCanvas.style.left = '0';
-drawingCanvas.style.zIndex = '10';
-drawingCanvas.style.border = '1px solid black';
+// drawingCanvas.style.boxShadow = '0 0 20px rgba(0,0,0,0.5)';
+// drawingCanvas.style.filter = 'invert(1)';
 const drawingCanvasContext = drawingCanvas.getContext('2d');
 drawingCanvasContext.fillStyle = 'white';
 drawingCanvasContext.fillRect(0, 0, drawingCanvas.width, drawingCanvas.height);
 
 // Draw 3x3 grid
-const spriteBorderWidth = 8;
+const spriteBorderWidth = 16;
 drawingCanvasContext.strokeStyle = 'black';
 
 // Vertical lines
@@ -86,10 +84,23 @@ drawingCanvasContext.moveTo(0, (drawingCanvas.height * 3) / 3);
 drawingCanvasContext.lineTo(drawingCanvas.width, (drawingCanvas.height * 3) / 3);
 drawingCanvasContext.stroke();
 
-
 drawingCanvasContext.beginPath();
 
-document.body.appendChild(drawingCanvas);
+const drawingCanvasContainer = document.createElement('div');
+drawingCanvasContainer.style.position = 'fixed';
+drawingCanvasContainer.style.top = '0';
+drawingCanvasContainer.style.left = '0';
+drawingCanvasContainer.style.width = '100%';
+drawingCanvasContainer.style.height = '100%';
+drawingCanvasContainer.style.zIndex = '10';
+drawingCanvasContainer.style.display = 'none';
+drawingCanvasContainer.style.justifyContent = 'center';
+drawingCanvasContainer.style.alignItems = 'center';
+drawingCanvasContainer.style.backgroundColor = 'rgba(0, 0, 0, 0.4)';
+drawingCanvasContainer.style.backdropFilter = 'blur(2px)';
+
+drawingCanvasContainer.appendChild(drawingCanvas);
+document.body.appendChild(drawingCanvasContainer);
 
 let isDrawing = false;
 
@@ -113,7 +124,7 @@ function getCoordinates(e) {
 function draw(e) {
   if (!isDrawing) return;
   const { x, y } = getCoordinates(e);
-  drawingCanvasContext.lineWidth = 20;
+  drawingCanvasContext.lineWidth = 16;
   drawingCanvasContext.lineCap = 'round';
   drawingCanvasContext.strokeStyle = 'black';
   drawingCanvasContext.lineTo(x, y);
@@ -151,6 +162,7 @@ drawingCanvas.addEventListener('touchmove', (e) => {
 
 // Create 3d scene
 const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x000000);
 const camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 0.1, 1000 );
 camera.position.z = 10;
 
@@ -160,6 +172,8 @@ renderer.setAnimationLoop( animate );
 document.body.appendChild( renderer.domElement );
 
 const controls = new OrbitControls(camera, renderer.domElement);
+controls.autoRotate = true;
+controls.autoRotateSpeed = 2;
 
 const geometry = new THREE.PlaneGeometry( 3.2, 3.2, 256, 256 );
 
@@ -174,20 +188,26 @@ const debugPlane = new THREE.Mesh( geometry, debugMaterial );
 // scene.add( debugPlane );
 
 const count = 200;
-const spriteMaterial = new THREE.MeshBasicNodeMaterial({  wireframe: false, side: THREE.DoubleSide });
+const spriteMaterial = new THREE.MeshBasicNodeMaterial({  wireframe: false, side: THREE.DoubleSide, transparent: true  });
+// spriteMaterial.depthWrite = true;
+// spriteMaterial.depthTest = true;
+
+const randomSampleX = floor(range(0, 3));
+const randomSampleY = floor(range(0, 3));
+const drawingCanvasSample = texture(canvasTexture, uv().div(3).add(vec2(randomSampleX.div(3), randomSampleY.div(3))));
 
 spriteMaterial.colorNode = Fn(() => {
-  const randomSampleX = floor(range(0, 3));
-  const randomSampleY = floor(range(0, 3));
-  return texture(canvasTexture, uv().div(3).add(vec2(randomSampleX.div(3), randomSampleY.div(3))));
+  const randomColor = vec3(range(0, 1), range(0, 1), range(0, 1));
+  return oneMinus(vec3(drawingCanvasSample.r)).mul(randomColor);
 })();
 
-const posRange = 4;
 spriteMaterial.positionNode = Fn(() => {
-  const randomX = range(-posRange, posRange);
-  const randomY = range(-posRange, posRange);
-  const randomZ = range(-posRange, posRange);
-
+  const posRange = 4;
+  const randomPosition = vec3(
+    range(-posRange, posRange),
+    range(-posRange, posRange),
+    range(-posRange, posRange)
+  );
   const randomRotation = vec3(
     range(0, PI.mul(2)),
     range(0, PI.mul(2)),
@@ -195,7 +215,7 @@ spriteMaterial.positionNode = Fn(() => {
   );
   
   // Start with the local vertex position, then offset by instance position
-  const pos = positionLocal.add(vec3(randomX, randomY, randomZ.add(0.1)));
+  const pos = positionLocal.add(randomPosition);
 
   // Apply rotation
   return rotate(
@@ -203,6 +223,11 @@ spriteMaterial.positionNode = Fn(() => {
     randomRotation
   );
 })();
+
+spriteMaterial.opacityNode = oneMinus(vec3(drawingCanvasSample.r));
+
+// spriteMaterial.alphaTestNode = drawingCanvasSample;
+// spriteMaterial.alphaToCoverage = true;
 
 const points = new THREE.Sprite( spriteMaterial );
 points.count = count;
@@ -221,3 +246,39 @@ function animate() {
 
   renderer.render( scene, camera );
 }
+
+// window.addEventListener('keydown', (e) => {
+  // if (e.key === '1') {
+  //   recordCanvas(drawingCanvas, 30000);
+  // }
+  // if (e.key === '2') {
+  //   console.log('recording 3d canvas');
+  //   recordCanvas(renderer.domElement, 50000);
+  // }
+// });
+
+const button = document.createElement('button');
+button.style.position = 'fixed';
+button.style.top = '20px';
+button.style.left = '20px';
+button.style.zIndex = '20';
+button.style.fontSize = '20px';
+button.style.appearance = 'none';
+button.style.padding = '10px 20px';
+button.style.backgroundColor = 'blue';
+button.style.color = 'white';
+button.style.border = 'none';
+button.style.borderRadius = '8px';
+button.style.cursor = 'pointer';
+
+button.textContent = 'Draw';
+button.onclick = () => {
+  if (drawingCanvasContainer.style.display === 'none') {
+    drawingCanvasContainer.style.display = 'flex';
+    button.textContent = 'Close';
+  } else {
+    drawingCanvasContainer.style.display = 'none';
+    button.textContent = 'Draw';
+  }
+};
+document.body.appendChild(button);
