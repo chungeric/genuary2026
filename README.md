@@ -5,3 +5,5 @@
 - [3 - Fibonacci forever.](https://chungeric.github.io/genuary2026/3/)
 - [4 - Lowres.](https://chungeric.github.io/genuary2026/4/)
 - [5 - Write “Genuary”. Avoid using a font.](https://chungeric.github.io/genuary2026/5/)
+- [6 - Lights on/off.](https://chungeric.github.io/genuary2026/6/)
+- [7 - Boolean algebra.](https://chungeric.github.io/genuary2026/7/)
