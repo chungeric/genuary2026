@@ -30,14 +30,14 @@ async function init() {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color('black');
   // scene.fog = new THREE.FogExp2( 0x000000, 0.025 );
-  const camera = new THREE.PerspectiveCamera( 20, 1080 / 1080, 0.1, 1000 );
+  const camera = new THREE.PerspectiveCamera( 20, window.innerWidth / window.innerHeight, 0.1, 1000 );
   camera.position.z = 150;
   camera.position.y = 56.25;
 
   const renderer = new THREE.WebGPURenderer();
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  renderer.setSize( 1080, 1080 );
+  renderer.setSize( window.innerWidth, window.innerHeight );
   renderer.setAnimationLoop( animate );
   document.body.appendChild( renderer.domElement );
 
