@@ -1,5 +1,6 @@
 import * as THREE from 'three/webgpu'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import gsap from 'gsap';
 import {
   // Type constructors & conversions
   float, int, vec2, vec3, vec4, color,
@@ -20,9 +21,13 @@ import {
 } from 'three/tsl';
 
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera( 20, window.innerWidth / window.innerHeight, 0.1, 1000 );
-camera.position.x = 5;
-camera.position.y = 5;
+const frustumSize = 20;
+const aspect = window.innerWidth / window.innerHeight;
+const camera = new THREE.OrthographicCamera(
+  -frustumSize * aspect / 2, frustumSize * aspect / 2,
+  frustumSize / 2, -frustumSize / 2,
+  -1000, 1000
+);
 camera.position.z = 5;
 
 
@@ -35,26 +40,47 @@ document.body.appendChild( renderer.domElement );
 
 const controls = new OrbitControls(camera, renderer.domElement);
 
-const geometry = new THREE.BoxGeometry( 1, 1, 1 );
+const geometry = new THREE.BoxGeometry( 2, 2, 2 );
 const material = new THREE.MeshStandardNodeMaterial({ color: "#fcbf49", side: THREE.DoubleSide });
 
-const cube1 = new THREE.Mesh( geometry, material );
-scene.add( cube1 );
-const cube2 = new THREE.Mesh( geometry, material );
-cube2.position.x = 0.75;
-cube2.scale.set(0.5, 0.5, 0.5);
-scene.add( cube2 );
+const GRID_SIZE = 10;
+const GRID_SPACING = 2;
+const GRID_OFFSET = (GRID_SIZE - 1) * GRID_SPACING / 2;
+const positions = [];
+const rotations = [];
 
-const gradientSkySphere = new THREE.SphereGeometry( 500, 32, 15 );
-const skyMaterial = new THREE.MeshBasicNodeMaterial({ side: THREE.BackSide });
-const topColor = color("#d62828");
-const bottomColor = color('#003049');
-const v = sub( normalWorld.y, float(0.5) );
-const skyColor = mix( bottomColor, topColor, v );
-skyMaterial.colorNode = skyColor;
-const sky = new THREE.Mesh( gradientSkySphere, skyMaterial );
-// sky.scale.set( -1, 1, 1 );
-scene.add( sky );
+for (let x = 0; x < GRID_SIZE; x++) {
+  for (let y = 0; y < GRID_SIZE; y++) {
+    positions.push([x * GRID_SPACING - GRID_OFFSET, y * GRID_SPACING - GRID_OFFSET, 0]);
+    rotations.push({ x: 0, y: 0, z: 0 });
+  }
+}
+
+const animating = new Set();
+
+function rotateRandomCube() {
+  const available = positions.map((_, i) => i).filter(i => !animating.has(i));
+  if (available.length === 0) return;
+
+  const i = available[Math.floor(Math.random() * available.length)];
+  const axis = Math.random() < 0.5 ? 'x' : 'y';
+  const direction = Math.random() < 0.5 ? 1 : -1;
+
+  animating.add(i);
+  gsap.to(rotations[i], {
+    [axis]: rotations[i][axis] + direction * Math.PI / 2,
+    duration: 0.5,
+    ease: 'back.out',
+    onComplete: () => animating.delete(i)
+  });
+}
+
+setInterval(rotateRandomCube, 100);
+
+const instancedMesh = new THREE.InstancedMesh(geometry, material, positions.length);
+scene.add(instancedMesh);
+
+const dummy = new THREE.Object3D();
 
 //  --- Lights ---
 const ambientLight = new THREE.AmbientLight( 0xcccccc, 2 );
@@ -65,13 +91,27 @@ directionalLight.position.set( 5, 10, 7.5 );
 scene.add( directionalLight );
 
 window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
+  const aspect = window.innerWidth / window.innerHeight;
+  camera.left = -frustumSize * aspect / 2;
+  camera.right = frustumSize * aspect / 2;
+  camera.top = frustumSize / 2;
+  camera.bottom = -frustumSize / 2;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
 function animate() {
-  // material.uniforms.time.value += 0.1;
   controls.update();
+
+  for (let i = 0; i < positions.length; i++) {
+    const pos = positions[i];
+    const rot = rotations[i];
+    dummy.position.set(pos[0], pos[1], pos[2]);
+    dummy.rotation.set(rot.x, rot.y, 0);
+    dummy.updateMatrix();
+    instancedMesh.setMatrixAt(i, dummy.matrix);
+  }
+  instancedMesh.instanceMatrix.needsUpdate = true;
+
   renderer.render( scene, camera );
 }
