@@ -19,8 +19,10 @@ import {
   time, abs, pow, saturate, step, smoothstep
 } from 'three/tsl';
 import { SUBTRACTION, INTERSECTION, ADDITION, Brush, Evaluator } from 'three-bvh-csg';
+import { recordCanvas } from './recordCanvas';
 
 const scene = new THREE.Scene();
+scene.background = new THREE.Color('white');
 const camera = new THREE.PerspectiveCamera( 20, window.innerWidth / window.innerHeight, 0.1, 1000 );
 // camera.position.x = 5;
 // camera.position.y = 5;
@@ -37,6 +39,10 @@ renderer.setAnimationLoop( animate );
 document.body.appendChild( renderer.domElement );
 
 const controls = new OrbitControls(camera, renderer.domElement);
+controls.autoRotate = true;
+controls.autoRotateSpeed = 1;
+controls.dampingFactor = 0.05;
+controls.enableDamping = true;
 
 // create brushes
 const evaluator = new Evaluator();
@@ -133,3 +139,25 @@ function animate() {
   controls.update();
   renderer.render( scene, camera );
 }
+
+function saveImage() {
+  renderer.domElement.toBlob((blob) => {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.download = 'moon-crater.png';
+    link.href = url;
+    link.click();
+    URL.revokeObjectURL(url);
+  });
+}
+
+// window.addEventListener('keydown', (event) => {
+//   if (event.key === 'r') {
+//     console.log('recording...');
+//     recordCanvas(renderer.domElement, 35000);
+//   }
+//   if (event.key === 's') {
+//     console.log('saving image...');
+//     saveImage();
+//   }
+// });
