@@ -71,8 +71,8 @@ const material = new THREE.ShaderMaterial({
 //   return vec4(uv(), 0, sin(time.mul(2)).mul(0.5).add(0.5));
 // })();
 
-const cube = new THREE.Mesh( geometry, material );
-scene.add( cube );
+const mesh = new THREE.Mesh( geometry, material );
+scene.add( mesh );
 
 //  --- Lights ---
 // const pointLight = new THREE.PointLight(0xffffff, 80);
